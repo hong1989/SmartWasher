@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:jee="http://www.springframework.org/schema/jee"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+	http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+	http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-3.0.xsd
+	http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+
+
+	<!-- 自定义的serverHandler -->
+	<bean id="serverHandler" class="com.sunrun.smartwasher.tcp.handler.ServerHandler">	
+	</bean>
+
+	<!-- 自定义的编解码过滤器 -->
+	<bean id="codecFilter" class="org.apache.mina.filter.codec.ProtocolCodecFilter">
+		<constructor-arg>
+			<bean class="com.sunrun.smartwasher.tcp.codefactory.ServerCodecFactory" />
+		</constructor-arg>
+	</bean>
+
+
+	<!-- 指定服务端地址和端口 -->
+	<bean id="address" class="java.net.InetSocketAddress">
+		<!--  <constructor-arg index="0" value="122.112.251.48" />
+		<constructor-arg index="1" value="9957" />-->
+		<constructor-arg index="0" value="9957" />
+	</bean>
+
+	<!-- 日志filter -->
+	<bean id="loggingFilter" class="org.apache.mina.filter.logging.LoggingFilter" />
+
+	<!-- 配置 executorFilter --> 
+   <bean id="executorFilter" class="org.apache.mina.filter.executor.ExecutorFilter"> 
+	   <constructor-arg index="0"> 
+	  		<value>16</value> 
+		</constructor-arg> 
+	   <constructor-arg index="1"> 
+			<value>20</value> 
+	  </constructor-arg> 
+ </bean> 
+	<!-- 过滤器链 -->
+	<bean id="filterChainBuilder" class="org.apache.mina.core.filterchain.DefaultIoFilterChainBuilder">
+		<property name="filters">
+			<map>
+				<entry key="codecFilter" value-ref="codecFilter" />
+			    <entry key="executor" value-ref="executorFilter" />
+			</map>
+		</property>
+	</bean>
+
+	<!-- SessionConfig 通过工厂方法注入 bothIdleTime值设置为0，表示通道空闲等待时间无限长，服务器不主动断开连接 -->
+	<bean id="sessionConfig" factory-bean="ioAcceptor" factory-method="getSessionConfig">
+		<property name="bothIdleTime" value="60" /> 
+		<property name="minReadBufferSize" value="1024" />
+		<property name="maxReadBufferSize" value="10240" />
+	</bean>
+	
+	<!-- 开始运行socket服务 -->
+	<bean id="ioAcceptor" class="org.apache.mina.transport.socket.nio.NioSocketAcceptor"
+		init-method="bind" destroy-method="unbind">
+		<property name="defaultLocalAddress" ref="address" />
+		<property name="handler" ref="serverHandler" />
+		<property name="filterChainBuilder" ref="filterChainBuilder" />
+		<property name="reuseAddress" value="true" />
+	</bean>
+
+</beans>

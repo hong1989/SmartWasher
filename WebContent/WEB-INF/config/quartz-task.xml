@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd"
+	default-lazy-init="false">
+	<!-- spring的 调度器 -->
+    <bean name="scheduler" class="org.springframework.scheduling.quartz.SchedulerFactoryBean"> 
+       <!-- 通过applicationContextSchedulerContextKey属性配置spring上下文 -->    
+        <property name="applicationContextSchedulerContextKey">    
+            <value>applicationContext</value>    
+        </property>   
+    </bean>  
+
+     <!-- 定时将redis中缓存数据插入到后台数据库-->
+    <bean name="DatabaseThreadCheck" class="org.springframework.scheduling.quartz.JobDetailFactoryBean" >
+    	<property name="jobClass" value="com.sunrun.smartwasher.redis.task.DatabaseThreadCheck" />
+    	<property name="jobDataAsMap">
+    		<map>
+    			<entry key="timeout" value="0" />
+    		</map>
+    	</property>
+    </bean>
+    
+   
+	 <!-- 定时检测主线程是否有挂掉  任务调度器-->
+	 <!--目前为spring-4.2.7+Quartz-2.1.7 将JobDetailBean修改为JobDetailFactoryBean -->
+    <bean id="DatabaseThreadCheckTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+    	<property name="jobDetail" ref="DatabaseThreadCheck" />
+    	<property name="cronExpression">
+    		<value>0 0/1 * * * ?</value>
+    		<!-- 每30分钟进行调度  -->
+    		<!-- 格式: [秒] [分] [小时] [日] [月] [周] [年] -->
+    	</property>
+    </bean>
+    
+    
+    <!-- 配置调度工厂 -->
+    <bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+    	<!-- 加载自定义工厂 -->
+    	<property name="jobFactory">
+    		<bean class="com.sunrun.smartwasher.redis.task.SpringBeanJobFactory"></bean>
+    	</property>
+    	<property name="triggers">
+    		<list>
+    			<ref bean = "DatabaseThreadCheckTrigger"/>
+    		</list>
+    	</property>
+    </bean>
+</beans>

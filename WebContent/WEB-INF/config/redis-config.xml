@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:jee="http://www.springframework.org/schema/jee" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee.xsd
+	http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd"
+	default-lazy-init="true">
+	
+	<!-- redis基本配置 -->
+	<bean  id="jedisPoolConfig"  class="redis.clients.jedis.JedisPoolConfig"  >   
+	    <property name="maxTotal" value="${redis.pool.maxTotal}" />  
+	    <property  name="maxIdle"  value="${redis.pool.maxIdle}" />  
+	    <property  name="maxWaitMillis"  value="${redis.pool.maxWait}" />  
+	    <property  name="testOnBorrow"  value="${redis.pool.testOnBorrow}" /> 
+	    <property  name="testOnReturn"  value="${redis.pool.testOnReturn}" /> 
+	</bean>  
+	<!-- redis共享线程池配置 -->
+	<bean  id="shardedJedisPool"  class="redis.clients.jedis.ShardedJedisPool"  >  
+	    <constructor-arg  index="0"  ref="jedisPoolConfig" />  
+	    <constructor-arg index="1">  
+	        <list>  
+	        	<!--  需要分布式把这个注释打开即可，我这边只配置了一个redis服务
+	            <bean class="redis.clients.jedis.JedisShardInfo">  
+	                <constructor-arg  index="0"  value="${redis1.ip}" />  
+	                <constructor-arg  index="1"  value="${redis1.port}"  type="int" /> 
+	                <property name="password" value="sunrun"></property>  
+	            </bean>  
+	            -->
+	            <bean class="redis.clients.jedis.JedisShardInfo">  
+	                <constructor-arg  index="0"   value="${redis2.ip}" />  
+	                <constructor-arg  index="1"  value="${redis2.port}"  type="int" /> 
+	                <property name="password" value="${redis2.password}"></property> 
+	            </bean>  
+	        </list>  
+	    </constructor-arg>  
+	</bean>  
+	<!-- REDIS数据源注解配置 -->
+	<bean id="redisDataSource" class="com.sunrun.liehu.redis.pool.RedisDataSource" scope="singleton" >    
+       	<constructor-arg name="pool" ref="shardedJedisPool" />
+    </bean>   
+    
+    <context:component-scan base-package="com.sunrun.liehu.redis.dao.impl" />
+    
+    <context:component-scan base-package="com.sunrun.liehu.redis.manager.impl" />
+    
+    <context:component-scan base-package="com.sunrun.liehu.handler" />
+</beans>
